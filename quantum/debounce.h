@@ -11,3 +11,5 @@ bool debounce_active(void);
 void debounce_init(uint8_t num_rows);
 
 void debounce_free(void);
+
+void debounce_debug(void);
