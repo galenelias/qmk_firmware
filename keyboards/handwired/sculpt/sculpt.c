@@ -33,7 +33,7 @@ void keyboard_post_init_kb(void) {
     keyboard_post_init_user();
 }
 
-void dip_switch_update_kb(uint8_t index, bool active) {
+bool dip_switch_update_kb(uint8_t index, bool active) {
     switch (index) {
     case 0:
         if (active) {
@@ -42,7 +42,7 @@ void dip_switch_update_kb(uint8_t index, bool active) {
             layer_on(1);
         }
     }
-    dip_switch_update_user(index, active);
+    return dip_switch_update_user(index, active);
 }
 
 bool process_record_kb(uint16_t keycode, keyrecord_t *record) {
