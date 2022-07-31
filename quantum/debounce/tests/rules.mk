@@ -42,3 +42,8 @@ debounce_asym_eager_defer_pk_DEFS := $(DEBOUNCE_COMMON_DEFS)
 debounce_asym_eager_defer_pk_SRC := $(DEBOUNCE_COMMON_SRC) \
 	$(QUANTUM_PATH)/debounce/asym_eager_defer_pk.c \
 	$(QUANTUM_PATH)/debounce/tests/asym_eager_defer_pk_tests.cpp
+
+debounce_fancy_DEFS := $(DEBOUNCE_COMMON_DEFS)
+debounce_fancy_SRC := $(DEBOUNCE_COMMON_SRC) \
+	$(QUANTUM_PATH)/debounce/fancy.c \
+	$(QUANTUM_PATH)/debounce/tests/fancy_tests.cpp
