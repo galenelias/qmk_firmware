@@ -47,7 +47,7 @@ static void record_event(debounce_event_t evt) {
     uint16_t wpos = debounce_event_log_wpos;
     debounce_event_t* e = debounce_event_log + wpos;
     if (wpos == DEBOUNCE_DEBUG_LOG_SIZE - 1) {
-        wpos = 0;
+        debounce_event_log_wpos = 0;
     } else {
         debounce_event_log_wpos = wpos + 1;
     }

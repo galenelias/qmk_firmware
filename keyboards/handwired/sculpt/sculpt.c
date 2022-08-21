@@ -2,6 +2,8 @@
 #include "debounce.h"
 #include <avr/power.h>
 
+#define DEBOUNCE_DEBUG_ENABLE 1
+
 void keyboard_pre_init_kb(void) {
     keyboard_pre_init_user();
 
@@ -63,7 +65,7 @@ bool process_record_kb(uint16_t keycode, keyrecord_t *record) {
         }
     }
 #endif
-#if 0
+#if DEBOUNCE_DEBUG_ENABLE
     const uint8_t both_shifts = MOD_BIT(KC_LSHIFT) | MOD_BIT(KC_RSHIFT);
     switch (keycode) {
     case KC_H:
