@@ -56,7 +56,11 @@ typedef matrix_row_t local_row_t;
 #endif
 
 #ifndef DEBOUNCE_UP
-#    define DEBOUNCE_UP (DEBOUNCE * 2)
+#    define DEBOUNCE_UP DEBOUNCE
+#endif
+
+#ifndef DEBOUNCE_QUIESCE
+#    define DEBOUNCE_QUIESCE 30
 #endif
 
 
@@ -74,17 +78,19 @@ typedef matrix_row_t local_row_t;
 #error MATRIX_ROWS * MATRIX_COLS must be smaller than 255
 #endif
 
-#define DEBOUNCE_NULL 255
+enum {
+    WAITING = 0,
+    DEBOUNCING = 1,
+    QUIESCING = 2,
+};
 
 typedef struct {
-    // If nonzero, number of debounce milliseconds remaining,
-    // and this key is in the debounce list.
+    uint8_t state;
+    // If nonzero, number of debounce milliseconds remaining.
     uint8_t remaining;
-    uint8_t next;
-} debounce_counter_t;
+} key_state_t;
 
-static debounce_counter_t *debounce_counters;
-static uint8_t debounce_list_head;
+static key_state_t *key_states;
 
 static bool last_time_initialized;
 static fast_timer_t last_time;
@@ -93,24 +99,19 @@ static fast_timer_t last_time;
 void debounce_init(uint8_t num_rows) {
     last_time_initialized = false;
 
-    debounce_counters = malloc(num_rows * MATRIX_COLS * sizeof(debounce_counter_t));
-    debounce_counter_t *p = debounce_counters;
+    key_states = malloc(num_rows * MATRIX_COLS * sizeof(key_state_t));
+    key_state_t *p = key_states;
     for (uint8_t r = 0; r < num_rows; r++) {
         for (uint8_t c = 0; c < MATRIX_COLS; c++) {
-            p->remaining = 0;
-            p->next = DEBOUNCE_NULL;
+            p->state = WAITING;
             ++p;
         }
     }
-
-    debounce_list_head = DEBOUNCE_NULL;
 }
 
 void debounce_free(void) {
-    free(debounce_counters);
-    debounce_counters = NULL;
-
-    debounce_list_head = DEBOUNCE_NULL;
+    free(key_states);
+    key_states = NULL;
 
     last_time_initialized = false;
 }
@@ -118,15 +119,20 @@ void debounce_free(void) {
 #define iprintf(...) ((void)0)
 //#define iprintf(...) (printf(__VA_ARGS__))
 
+static fast_timer_t first_time;
+
 static uint8_t get_elapsed(void) {
 #ifdef DEBOUNCE_USE_FRAMES
-    // This debouncer uses frames instead of milliseconds.
+    // This debouncer counts scan frames instead of milliseconds. This
+    // introduces less sampling distortion for keyboards that sample at
+    // a high, but sub-kHz, rate.
     return 1;
 #else
     // TODO: initialize last_time somewhere
     if (unlikely(!last_time_initialized)) {
         last_time_initialized = true;
         last_time = timer_read_fast();
+        first_time = last_time;
         iprintf("init timer: %d\n", last_time);
         return 1;
     }
@@ -140,64 +146,60 @@ static uint8_t get_elapsed(void) {
 }
 
 
+static fast_timer_t get_time(void) {
+    return timer_read_fast() - first_time;
+}
+
 void debounce(matrix_row_t raw[], matrix_row_t cooked[], uint8_t num_rows, bool changed) {
     const uint8_t elapsed = get_elapsed();
 
-    uint8_t* pp = &debounce_list_head;
-    uint8_t p = debounce_list_head;
-    while (DEBOUNCE_NULL != p) {
-        debounce_counter_t* entry = debounce_counters + p;
-        assert(entry->remaining != 0);
-        if (entry->remaining > elapsed) {
-            entry->remaining -= elapsed;
-            pp = &entry->next;
-            p = *pp;
-        } else {
-            // Apply raw to cooked.
-            uint8_t row = p / MATRIX_COLS;
-            uint8_t col = p % MATRIX_COLS;
-            matrix_row_t col_mask = 1 << col;
-            matrix_row_t delta = (cooked[row] ^ raw[row]) & col_mask;
-            iprintf("bumping cooked: %ld\n", (long)cooked[row]);
-            cooked[row] ^= delta;
+    //printf("elapsed: %d\n", (int)elapsed);
 
-            // Remove from list.
-            p = entry->next;
-            *pp = p;
-            entry->remaining = 0;
-            entry->next = DEBOUNCE_NULL;
-        }
-    }
+    key_state_t* p = key_states;
+    for (uint8_t r = 0; r < num_rows; ++r) {
+        matrix_row_t raw_row = raw[r];
+        matrix_row_t cooked_row = cooked[r];
+        matrix_row_t delta = cooked_row ^ raw_row;
 
-    iprintf("debounce: changed=%s, elapsed=%d\n", changed ? "true" : "false", elapsed);
-
-    if (changed) {
-        debounce_counter_t* p = debounce_counters;
-        for (uint8_t row = 0; row < num_rows; ++row) {
-            matrix_row_t cooked_row = cooked[row];
-            matrix_row_t raw_row = raw[row];
-            matrix_row_t delta = cooked_row ^ raw_row;
-            if (0 == delta) {
-                p += MATRIX_COLS;
-                continue;
-            }
-            for (uint8_t col = 0; col < MATRIX_COLS; ++col, ++p) {
-                matrix_row_t col_mask = 1 << col;
-                if (col_mask & (cooked_row ^ raw_row)) {
-                    // is (row, col) debouncing?
-                    if (0 == p->remaining) {
-                        // Not debouncing, so add it to the head of the list.
-                        p->next = debounce_list_head;
-                        debounce_list_head = p - debounce_counters;
-                        p->remaining = (col_mask & raw_row) ? DEBOUNCE_DOWN : DEBOUNCE_UP;
-                    } else {
-                        // fluttering: this frame doesn't count
-                        p->remaining += elapsed;
+        matrix_row_t col_mask = 1;
+        for (uint8_t col = 0; col < MATRIX_COLS; ++col, col_mask <<= 1, ++p) {
+            switch (p->state) {
+                case WAITING:
+                    if (delta & col_mask) {
+                        printf("transitioning to DEBOUNCING %d\n", get_time());
+                        p->state = DEBOUNCING;
+                        p->remaining = (raw & col_mask) ? DEBOUNCE_DOWN : DEBOUNCE_UP;
                     }
-                }
+                    break;
+                case DEBOUNCING:
+                    if (0 == (delta & col_mask)) {
+                        // Detected bounce -- back to waiting.
+                        printf("transitioning to WAITING %d\n", get_time());
+                        p->state = WAITING;
+                    } else if (p->remaining > elapsed) {
+                        p->remaining -= elapsed;
+                    } else {
+                        printf("transitioning to QUIESCING %d\n", get_time());
+                        p->state = QUIESCING;
+                        p->remaining = DEBOUNCE_QUIESCE;
+                        cooked_row ^= col_mask;
+                    }
+                    break;
+                case QUIESCING:
+                    if (p->remaining > elapsed) {
+                        p->remaining -= elapsed;
+                    } else {
+                        printf("transitioning to WAITING %d\n", get_time());
+                        p->state = WAITING;
+                    }
+                    break;
             }
         }
-    }
+        cooked[r] = cooked_row;
+    }    
+
+    //iprintf("debounce: changed=%s, elapsed=%d\n", changed ? "true" : "false", elapsed);
+
 }
 
 bool debounce_active(void) { return true; }

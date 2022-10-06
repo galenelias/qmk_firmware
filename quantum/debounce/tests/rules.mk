@@ -43,6 +43,7 @@ debounce_asym_eager_defer_pk_SRC := $(DEBOUNCE_COMMON_SRC) \
 	$(QUANTUM_PATH)/debounce/asym_eager_defer_pk.c \
 	$(QUANTUM_PATH)/debounce/tests/asym_eager_defer_pk_tests.cpp
 
+#debounce_fancy_DEFS := -DMATRIX_ROWS=4 -DMATRIX_COLS=10 -DDEBOUNCE=2 -DDEBOUNCE_QUIESCE=30 -DDEBOUNCE_GHOST=5
 debounce_fancy_DEFS := $(DEBOUNCE_COMMON_DEFS)
 debounce_fancy_SRC := $(DEBOUNCE_COMMON_SRC) \
 	$(QUANTUM_PATH)/debounce/fancy.c \

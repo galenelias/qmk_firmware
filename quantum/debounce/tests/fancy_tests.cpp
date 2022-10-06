@@ -18,30 +18,85 @@
 
 #include "debounce_test_common.h"
 
-TEST_F(DebounceTest, OneKeyShort1) {
+TEST_F(DebounceTest, ShortBounceIgnored) {
     addEvents({ /* Time, Inputs, Outputs */
         {0, {{0, 1, DOWN}}, {}},
-
-        {5, {}, {{0, 1, DOWN}}},
-        /* 0ms delay (fast scan rate) */
-        {5, {{0, 1, UP}}, {}},
-
-        {10, {}, {{0, 1, UP}}},
+        {1, {{0, 1, UP}}, {}},
+        {2, {}, {}},
     });
     runEvents();
 }
 
+TEST_F(DebounceTest, OneKeyShort1) {
+    addEvents({ /* Time, Inputs, Outputs */
+        {0, {{0, 1, DOWN}}, {}},
+        {5, {}, {{0, 1, DOWN}}},
+        {40, {}, {}}, // Tick the test simulator to transition out of quiescence
+        {57, {{0, 1, UP}}, {}},
+        {62, {}, {{0, 1, UP}}},
+    });
+    runEvents();
+}
+
+TEST_F(DebounceTest, RapidBouncingIgnored) {
+    addEvents({ /* Time, Inputs, Outputs */
+        {0, {{0, 1, DOWN}}, {}},
+        {1, {{0, 1, UP}}, {}},
+        {2, {{0, 1, DOWN}}, {}},
+        {3, {{0, 1, UP}}, {}},
+        {4, {{0, 1, DOWN}}, {}},
+        {5, {{0, 1, UP}}, {}},
+        {6, {{0, 1, DOWN}}, {}},
+        {7, {{0, 1, UP}}, {}},
+        {8, {{0, 1, DOWN}}, {}},
+        {9, {{0, 1, UP}}, {}},
+        {10, {}, {}},
+    });
+    runEvents();
+}
+
+TEST_F(DebounceTest, FastBounceOnPress) {
+    addEvents({ /* Time, Inputs, Outputs */
+        {0, {{0, 1, DOWN}}, {}},
+        {1, {{0, 1, UP}}, {}},
+        {2, {{0, 1, DOWN}}, {}},
+        {7, {}, {{0, 1, DOWN}}},
+    });
+    runEvents();
+}
+
+TEST_F(DebounceTest, SlowBounceOnRelease) {
+   addEvents({ /* Time, Inputs, Outputs */
+        {0, {{0, 1, DOWN}}, {}},
+        {5, {}, {{0, 1, DOWN}}},
+        {15, {{0, 1, UP}}, {}},
+        {20, {{0, 1, DOWN}}, {}},
+    });
+    runEvents();
+}
+
+#if 0
+
 TEST_F(DebounceTest, OneKeyShort2) {
     addEvents({ /* Time, Inputs, Outputs */
         {0, {{0, 1, DOWN}}, {}},
-
-        {5, {}, {{0, 1, DOWN}}},
+        {2, {}, {{0, 1, DOWN}}},
         /* 1ms delay */
-        {6, {{0, 1, UP}}, {}},
-
-        {11, {}, {{0, 1, UP}}},
+        {3, {{0, 1, UP}}, {}},
+        {5, {}, {{0, 1, UP}}},
     });
     runEvents();
+}
+
+TEST_F(DebounceTest, LongBounceUpIgnored) {
+    addEvents({ /* Time, Inputs, Outputs */
+        {0, {{0, 1, DOWN}}, {}},
+        {2, {}, {{0, 1, DOWN}}},
+        {3, {{0, 1, UP}}, {}},
+        {4, {}, {{0, 1, UP}}},
+        /* 20ms delay */
+        {24, {{0, 1, DOWN}}, {}},
+        {25, {{0, 1, UP}}, {}},
 }
 
 TEST_F(DebounceTest, OneKeyShort3) {
@@ -221,3 +276,5 @@ TEST_F(DebounceTest, OneKeyDelayedScan4) {
     time_jumps_ = true;
     runEvents();
 }
+
+#endif
