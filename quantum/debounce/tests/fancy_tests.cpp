@@ -66,11 +66,89 @@ TEST_F(DebounceTest, FastBounceOnPress) {
 }
 
 TEST_F(DebounceTest, SlowBounceOnRelease) {
-   addEvents({ /* Time, Inputs, Outputs */
+    addEvents({ /* Time, Inputs, Outputs */
         {0, {{0, 1, DOWN}}, {}},
         {5, {}, {{0, 1, DOWN}}},
         {15, {{0, 1, UP}}, {}},
         {20, {{0, 1, DOWN}}, {}},
+    });
+    runEvents();
+}
+
+TEST_F(DebounceTest, MultipleInRowDontGhost) {
+    addEvents({ /* Time, Inputs, Outputs */
+        {0, {{0, 0, DOWN}}, {}},
+        {5, {}, {{0, 0, DOWN}}},
+        {10, {{0, 1, DOWN}}, {}},
+        {15, {}, {{0, 1, DOWN}}},
+        {20, {{0, 2, DOWN}}, {}},
+        {25, {}, {{0, 2, DOWN}}},
+    });
+    runEvents();
+}
+
+TEST_F(DebounceTest, MultipleInColumnDontGhost) {
+    addEvents({ /* Time, Inputs, Outputs */
+        {0, {{0, 0, DOWN}}, {}},
+        {5, {}, {{0, 0, DOWN}}},
+        {10, {{1, 0, DOWN}}, {}},
+        {15, {}, {{1, 0, DOWN}}},
+        {20, {{2, 0, DOWN}}, {}},
+        {25, {}, {{2, 0, DOWN}}},
+    });
+    runEvents();
+}
+
+TEST_F(DebounceTest, RowGhostsAreIgnored) {
+    addEvents({ /* Time, Inputs, Outputs */
+        {0, {{0, 0, DOWN}}, {}},
+        {5, {{0, 1, DOWN}}, {{0, 0, DOWN}}},
+        {10, {}, {{0, 1, DOWN}}},
+        // Simulate ghost -- cannot tell whether {1, 0} or {1, 1} is pressed.
+        {15, {{1, 0, DOWN}, {1, 1, DOWN}}, {}},
+    });
+    runEvents();
+}
+
+TEST_F(DebounceTest, RowOffsetGhostingIsIgnored) {
+    addEvents({ /* Time, Inputs, Outputs */
+        {0, {{0, 0, DOWN}}, {}},
+        {5, {{0, 1, DOWN}}, {{0, 0, DOWN}}},
+        {10, {}, {{0, 1, DOWN}}},
+        // Simulate ghost -- cannot tell whether {1, 0} or {1, 1} is pressed, but
+        // one column shows before the other.
+        {15, {{1, 0, DOWN}}, {}},
+        {16, {{1, 1, DOWN}}, {}},
+        // Then one of them is up before the other.
+        {25, {{1, 0, UP}}, {}},
+        {26, {{1, 1, UP}}, {}},
+    });
+    runEvents();
+}
+
+TEST_F(DebounceTest, ColGhostsAreIgnored) {
+    addEvents({ /* Time, Inputs, Outputs */
+        {0, {{0, 0, DOWN}}, {}},
+        {5, {{1, 0, DOWN}}, {{0, 0, DOWN}}},
+        {10, {}, {{1, 0, DOWN}}},
+        // Simulate ghost -- cannot tell whether {0, 1} or {1, 1} is pressed.
+        {15, {{0, 1, DOWN}, {1, 1, DOWN}}, {}},
+    });
+    runEvents();
+}
+
+TEST_F(DebounceTest, ColOffsetGhostingIsIgnored) {
+    addEvents({ /* Time, Inputs, Outputs */
+        {0, {{0, 0, DOWN}}, {}},
+        {5, {{1, 0, DOWN}}, {{0, 0, DOWN}}},
+        {10, {}, {{1, 0, DOWN}}},
+        // Simulate ghost -- cannot tell whether {1, 0} or {1, 1} is pressed, but
+        // one column shows before the other.
+        {15, {{0, 1, DOWN}}, {}},
+        {16, {{1, 1, DOWN}}, {}},
+        // Then one of them is up before the other.
+        {25, {{0, 1, UP}}, {}},
+        {26, {{1, 1, UP}}, {}},
     });
     runEvents();
 }

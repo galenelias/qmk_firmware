@@ -150,10 +150,34 @@ static fast_timer_t get_time(void) {
     return timer_read_fast() - first_time;
 }
 
+static void log_transition(const char* name) {
+#if 0
+    printf("transitioning to %s %d\n", name, get_time());
+#else
+    (void)name;
+    (void)get_time;
+#endif
+}
+
 void debounce(matrix_row_t raw[], matrix_row_t cooked[], uint8_t num_rows, bool changed) {
     const uint8_t elapsed = get_elapsed();
 
     //printf("elapsed: %d\n", (int)elapsed);
+
+    uint8_t down_in_row[num_rows];
+    uint8_t down_in_col[MATRIX_COLS] = {};
+    for (uint8_t r = 0; r < num_rows; ++r) {
+        // TODO: optimized popcnt
+        uint8_t popcnt = 0;
+        matrix_row_t row = raw[r];
+        for (uint8_t col = 0; col < MATRIX_COLS; ++col) {
+            bool down = row & 1;
+            popcnt += down;
+            down_in_col[col] += down;
+            row >>= 1;
+        }
+        down_in_row[r] = popcnt;
+    }
 
     key_state_t* p = key_states;
     for (uint8_t r = 0; r < num_rows; ++r) {
@@ -163,23 +187,28 @@ void debounce(matrix_row_t raw[], matrix_row_t cooked[], uint8_t num_rows, bool 
 
         matrix_row_t col_mask = 1;
         for (uint8_t col = 0; col < MATRIX_COLS; ++col, col_mask <<= 1, ++p) {
+            if (down_in_row[r] > 1 && down_in_col[col] > 1) {
+                // Ghost, ignore any debouncing logic this time around.
+                continue;
+            }
+
             switch (p->state) {
                 case WAITING:
                     if (delta & col_mask) {
-                        printf("transitioning to DEBOUNCING %d\n", get_time());
+                        log_transition("DEBOUNCING");
                         p->state = DEBOUNCING;
-                        p->remaining = (raw & col_mask) ? DEBOUNCE_DOWN : DEBOUNCE_UP;
+                        p->remaining = (raw_row & col_mask) ? DEBOUNCE_DOWN : DEBOUNCE_UP;
                     }
                     break;
                 case DEBOUNCING:
                     if (0 == (delta & col_mask)) {
                         // Detected bounce -- back to waiting.
-                        printf("transitioning to WAITING %d\n", get_time());
+                        log_transition("WAITING");
                         p->state = WAITING;
                     } else if (p->remaining > elapsed) {
                         p->remaining -= elapsed;
                     } else {
-                        printf("transitioning to QUIESCING %d\n", get_time());
+                        log_transition("QUIESCING");
                         p->state = QUIESCING;
                         p->remaining = DEBOUNCE_QUIESCE;
                         cooked_row ^= col_mask;
@@ -189,7 +218,7 @@ void debounce(matrix_row_t raw[], matrix_row_t cooked[], uint8_t num_rows, bool 
                     if (p->remaining > elapsed) {
                         p->remaining -= elapsed;
                     } else {
-                        printf("transitioning to WAITING %d\n", get_time());
+                        log_transition("WAITING");
                         p->state = WAITING;
                     }
                     break;
