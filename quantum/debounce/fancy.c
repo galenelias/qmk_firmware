@@ -188,7 +188,7 @@ void debounce(matrix_row_t raw[], matrix_row_t cooked[], uint8_t num_rows, bool 
         matrix_row_t col_mask = 1;
         for (uint8_t col = 0; col < MATRIX_COLS; ++col, col_mask <<= 1, ++p) {
             if (down_in_row[r] > 1 && down_in_col[col] > 1) {
-                // Ghost, ignore any debouncing logic this time around.
+                // Possible ghost, ignore any debouncing logic this time around.
                 continue;
             }
 
