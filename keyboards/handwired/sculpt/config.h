@@ -40,6 +40,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 /* COL2ROW or ROW2COL */
 #define DIODE_DIRECTION COL2ROW
 
+#define DEBOUNCE_USE_FRAMES 1
+
 /*
  * I lived with no debouncing for a while, but phantom keypresses were common.
  *
@@ -53,7 +55,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * "bhecause", I measured 4 ms on the phantom h keypress. Therefore, let's try
  * setting DEBOUNCE_DOWN to 4.
  */
-#define DEBOUNCE_DOWN 4
+#define DEBOUNCE_DOWN 1
 /*
  * Keyup latency is less perceptible unless phantom keys appear, so use
  * a longer debounce.

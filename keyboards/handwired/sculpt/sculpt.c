@@ -2,7 +2,7 @@
 #include "debounce.h"
 #include <avr/power.h>
 
-#define DEBOUNCE_DEBUG_ENABLE 1
+#define DEBOUNCE_DEBUG_ENABLE 0
 
 void keyboard_pre_init_kb(void) {
     keyboard_pre_init_user();
