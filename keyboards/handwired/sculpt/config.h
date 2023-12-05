@@ -25,7 +25,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define VENDOR_ID       0x1209 // https://pid.codes/1209/
 #define PRODUCT_ID      0xC846 // made up
 #define DEVICE_VER      0x0001
-#define MANUFACTURER    Chad Austin
+#define MANUFACTURER    Galen Elias
 #define PRODUCT         Wired Sculpt
 #define DESCRIPTION     Microsoft Sculpt Wired Conversion
 
@@ -34,7 +34,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #define MATRIX_ROW_PINS {A5, A6, A7, C7, C6, C5, C4, C3, C2, C1, C0, E1, E0, D7, D6, D5, D4, D3}
 #define MATRIX_COL_PINS {F7, F6, F5, A4, A3, A2, A1, A0}
-#define DIP_SWITCH_PINS {F4}
 #define UNUSED_PINS {/*...*/}
 
 /* COL2ROW or ROW2COL */
@@ -82,17 +81,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
     keyboard_report->mods == (MOD_BIT(KC_LSHIFT) | MOD_BIT(KC_RSHIFT)) \
 )
 
-#define LATENCY_MODE_ENABLE 0
-#define LATENCY_MODE_PIN D2
-
-#if !LATENCY_MODE_ENABLE
-#define LED_CAPS_LOCK_PIN B7
-#endif
+#define LED_CAPS_LOCK_PIN B6
 
 #define SCULPT_RIGHT_SPACE_KEY KC_SPC
 
 #define USB_POLLING_INTERVAL_MS 2
-//#define QMK_KEYS_PER_SCAN 1
+//#define QMK_KEYS_PER_SCAN 10
 
 #define DEBUG_MATRIX_SCAN_RATE 1
 
